@@ -50,6 +50,14 @@ async def request_otp(payload: EmailCheckRequest, db: AsyncSession = Depends(get
     return EmailCheckResponse()
 
 
+@router.post("/register/resend-otp", response_model=EmailCheckResponse)
+async def resend_otp(payload: EmailCheckRequest, db: AsyncSession = Depends(get_db)):
+    await service.resend_registration_otp(db, payload.email)
+    return EmailCheckResponse(
+        message="If a verification is pending, a new OTP has been sent."
+    )
+
+
 @router.post("/register/verify-otp", response_model=OTPVerifyResponse)
 async def verify_otp(payload: OTPVerifyRequest, db: AsyncSession = Depends(get_db)):
     try:

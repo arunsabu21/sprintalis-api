@@ -67,6 +67,41 @@ async def request_registration_otp(db: AsyncSession, email: str) -> None:
     print(f"[DEV] OTP for {email}: {raw_otp}")
 
 
+async def resend_registration_otp(db: AsyncSession, email: str) -> None:
+    existing_user = await db.scalar(select(User).where(User.email == email))
+    if existing_user is not None:
+        return
+
+    pending = await db.scalar(
+        select(EmailVerification)
+        .where(
+            EmailVerification.email == email,
+            EmailVerification.purpose == OTPPurpose.REGISTER,
+            EmailVerification.consumed.is_(False),
+        )
+        .order_by(EmailVerification.created_at.desc())
+        .limit(1)
+    )
+
+    if pending is None:
+        return
+
+    pending.consumed = True
+
+    raw_otp = security.generate_otp()
+    new_verification = EmailVerification(
+        email=email,
+        otp_hash=security.hash_otp(raw_otp),
+        purpose=OTPPurpose.REGISTER,
+        expires_at=security.get_otp_expiry(),
+    )
+    db.add(new_verification)
+    await db.commit()
+
+    # TODO: real email provider. Dev-only logging
+    print(f"[DEV] Resent OTP for {email}: {raw_otp}")
+
+
 async def verify_registration_otp(db: AsyncSession, email: str, otp: str) -> str:
     verification = await db.scalar(
         select(EmailVerification)
