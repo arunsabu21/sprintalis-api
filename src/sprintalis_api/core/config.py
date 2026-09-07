@@ -21,5 +21,8 @@ class Settings(BaseSettings):
     google_client_id: str
     google_client_secret: str
 
+    password_reset_expire_minutes: int = 15
+    frontend_url: str
+
 
 settings = Settings()

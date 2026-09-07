@@ -66,7 +66,7 @@ class RegisterRequest(BaseModel):
             raise ValueError("Password must contain at least one lowercase letter")
 
         if not re.search(r"\d", v):
-            raise ValueError("Password mus contain at least one digit")
+            raise ValueError("Password must contain at least one digit")
 
         return v
 
@@ -113,3 +113,41 @@ class UserPublic(BaseModel):
 class LoginResponse(BaseModel):
     user: UserPublic
     tokens: TokenPair
+
+
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+
+    @field_validator("email")
+    @classmethod
+    def normalize(cls, v: str) -> str:
+        return normalize_email(v)
+
+
+class PasswordResetRequestResponse(BaseModel):
+    message: str = (
+        "If an eligible account exists for this email, password instructions will be sent."
+    )
+
+
+class PasswordResetConfirmRequest(BaseModel):
+    token: str
+    new_password: str = Field(min_length=8, max_length=128)
+
+    @field_validator("new_password")
+    @classmethod
+    def password_strength(cls, v: str) -> str:
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("Password must contain at least one uppercase letter")
+
+        if not re.search(r"[a-z]", v):
+            raise ValueError("Password must contain at least one lowercase letter")
+
+        if not re.search(r"\d", v):
+            raise ValueError("Password must contain at least one digit")
+
+        return v
+
+
+class PasswordResetConfirmResponse(BaseModel):
+    message: str = "Your password has been reset. Please log in with your new password."

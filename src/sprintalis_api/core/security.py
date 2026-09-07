@@ -126,3 +126,17 @@ def decode_registration_ticket(ticket: str) -> str | None:
         return None
 
     return email
+
+
+def generate_password_reset_token() -> str:
+    return secrets.token_urlsafe(32)
+
+
+def hash_password_reset_token(raw_token: str) -> str:
+    return hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+
+
+def get_password_reset_expiry() -> datetime:
+    return datetime.now(timezone.utc) + timedelta(
+        minutes=settings.password_reset_expire_minutes
+    )

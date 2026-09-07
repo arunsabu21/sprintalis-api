@@ -15,6 +15,8 @@ from sprintalis_api.core.exceptions import (
     AccountUsesPasswordError,
     InvalidGoogleTokenError,
     InvalidRefreshTokenError,
+    InvalidResetTokenError,
+    SamePasswordError,
 )
 
 from sprintalis_api.authentication import service
@@ -35,6 +37,10 @@ from sprintalis_api.authentication.schemas import (
     TokenPair,
     LoginResponse,
     UserPublic,
+    PasswordResetRequest,
+    PasswordResetRequestResponse,
+    PasswordResetConfirmRequest,
+    PasswordResetConfirmResponse,
 )
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
@@ -166,6 +172,27 @@ async def logout_all(
     current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     await service.logout_all_sessions(db, current_user.id)
+
+
+@router.post("/password-reset/request", response_model=PasswordResetRequestResponse)
+async def request_password_reset(
+    payload: PasswordResetRequest, db: AsyncSession = Depends(get_db)
+):
+    await service.request_password_reset(db, payload.email)
+    return PasswordResetRequestResponse()
+
+
+@router.post("/password-reset/confirm", response_model=PasswordResetConfirmResponse)
+async def confirm_password_reset(
+    payload: PasswordResetConfirmRequest, db: AsyncSession = Depends(get_db)
+):
+    try:
+        await service.reset_password(db, payload.token, payload.new_password)
+    except InvalidResetTokenError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message)
+    except SamePasswordError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message)
+    return PasswordResetConfirmResponse()
 
 
 @router.get("/me", response_model=UserPublic)

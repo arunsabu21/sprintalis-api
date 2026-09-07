@@ -55,3 +55,11 @@ class InvalidGoogleTokenError(AppError):
 
 class InvalidRefreshTokenError(AppError):
     pass
+
+
+class InvalidResetTokenError(AppError):
+    pass
+
+
+class SamePasswordError(AppError):
+    pass

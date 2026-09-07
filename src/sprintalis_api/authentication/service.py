@@ -1,5 +1,5 @@
 from datetime import datetime, timezone, timedelta
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from sprintalis_api.core import security
@@ -17,6 +17,8 @@ from sprintalis_api.core.exceptions import (
     AccountUsesPasswordError,
     InvalidGoogleTokenError,
     InvalidRefreshTokenError,
+    InvalidResetTokenError,
+    SamePasswordError,
 )
 
 from sprintalis_api.authentication.models import (
@@ -354,3 +356,111 @@ async def _issue_token_pair(
     await db.commit()
 
     return TokenPair(access_token=access_token, refresh_token=raw_refresh)
+
+
+async def request_password_reset(db: AsyncSession, email: str) -> None:
+    user = await db.scalar(select(User).where(User.email == email))
+    if user is None:
+        return
+
+    identity = await db.scalar(
+        select(AuthIdentity).where(
+            AuthIdentity.user_id == user.id,
+            AuthIdentity.provider == AuthProvider.PASSWORD,
+        )
+    )
+
+    if identity is None or identity.password_hash is None:
+        return
+
+    old_rows = await db.scalars(
+        select(EmailVerification).where(
+            EmailVerification.email == email,
+            EmailVerification.purpose == OTPPurpose.PASSWORD_RESET,
+            EmailVerification.consumed.is_(False),
+        )
+    )
+
+    for row in old_rows:
+        row.consumed = True
+
+    raw_token = security.generate_password_reset_token()
+    verification = EmailVerification(
+        email=email,
+        otp_hash=security.hash_password_reset_token(raw_token),
+        purpose=OTPPurpose.PASSWORD_RESET,
+        expires_at=security.get_password_reset_expiry(),
+    )
+    db.add(verification)
+    await db.commit()
+
+    # TODO: real email provider. Dev-only logging
+    reset_link = f"{settings.frontend_url}/reset-password?token={raw_token}"
+    print(f"[DEV] Password reset link for {email}: {reset_link}")
+
+
+async def reset_password(db: AsyncSession, raw_token: str, new_password: str) -> None:
+    token_hash = security.hash_password_reset_token(raw_token)
+    now = datetime.now(timezone.utc)
+
+    stmt = (
+        update(EmailVerification)
+        .where(
+            EmailVerification.otp_hash == token_hash,
+            EmailVerification.purpose == OTPPurpose.PASSWORD_RESET,
+            EmailVerification.consumed.is_(False),
+            EmailVerification.expires_at > now,
+        )
+        .values(consumed=True)
+        .returning(EmailVerification.email)
+    )
+
+    result = await db.execute(stmt)
+    row = result.first()
+
+    if row is None:
+        await db.rollback()
+        raise InvalidResetTokenError("This reset link is invalid or has expired.")
+
+    email = row[0]
+
+    user = await db.scalar(select(User).where(User.email == email))
+    if user is None:
+        await db.rollback()
+        raise InvalidResetTokenError("This reset link is invalid or has expired.")
+
+    identity = await db.scalar(
+        select(AuthIdentity).where(
+            AuthIdentity.user_id == user.id,
+            AuthIdentity.provider == AuthProvider.PASSWORD,
+        )
+    )
+
+    if identity is None:
+        await db.rollback()
+        raise InvalidResetTokenError("This reset link is invalid or has expired.")
+
+    if identity.password_hash and security.verify_password(
+        new_password, identity.password_hash
+    ):
+        await db.rollback()
+        raise SamePasswordError(
+            "New password must be different from your current password."
+        )
+
+    identity.password_hash = security.hash_password(new_password)
+
+    active_tokens = await db.scalars(
+        select(RefreshToken).where(
+            RefreshToken.user_id == user.id,
+            RefreshToken.revoked.is_(False),
+        )
+    )
+
+    for token in active_tokens:
+        token.revoked = True
+
+    await db.commit()
+
+    # TODO: real email provider. Dev-only logging
+    print(f"[DEV] Password reset successful for {email}. All sessions revoked.")
