@@ -475,8 +475,9 @@ Sprintalis is currently under active development.
 - [x] JWT access tokens
 - [x] Refresh tokens
 - [x] Google authentication
-- [ ] Resend OTP
-- [ ] Password Reset
+- [x] Resend OTP
+- [x] Password Reset
+- [ ] Rate Limiting (Active)
 
 ### Upcoming Features
 
@@ -503,13 +504,13 @@ The main goals of Sprintalis include:
 
 ---
 
-# 👨‍💻 Author
+# Author
 
 **Arun Sabu**
 
 ---
 
-## 📌 Note
+## Note
 
 Sprintalis is a personal learning and portfolio project currently under active development.
 

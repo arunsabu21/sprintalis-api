@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
+import redis.asyncio as redis
 
 from sprintalis_api.core.database import get_db
+from sprintalis_api.core.redis_client import get_redis
 from sprintalis_api.core.exceptions import (
     EmailAlreadyRegisteredError,
     InvalidOtpError,
@@ -23,6 +25,8 @@ from sprintalis_api.authentication import service
 from sprintalis_api.authentication.dependencies import (
     get_current_user,
     get_client_metadata,
+    rate_limit_registration_request,
+    rate_limit_registration_resend,
 )
 from sprintalis_api.authentication.models import User
 from sprintalis_api.authentication.schemas import (
@@ -47,7 +51,13 @@ router = APIRouter(prefix="/auth", tags=["authentication"])
 
 
 @router.post("/register/request-otp", response_model=EmailCheckResponse)
-async def request_otp(payload: EmailCheckRequest, db: AsyncSession = Depends(get_db)):
+async def request_otp(
+    request: Request,
+    payload: EmailCheckRequest,
+    db: AsyncSession = Depends(get_db),
+    redis_client: redis.Redis = Depends(get_redis),
+):
+    await rate_limit_registration_request(request, payload.email, redis_client)
     try:
         await service.request_registration_otp(db, payload.email)
     except EmailAlreadyRegisteredError:
@@ -57,7 +67,14 @@ async def request_otp(payload: EmailCheckRequest, db: AsyncSession = Depends(get
 
 
 @router.post("/register/resend-otp", response_model=EmailCheckResponse)
-async def resend_otp(payload: EmailCheckRequest, db: AsyncSession = Depends(get_db)):
+async def resend_otp(
+    request: Request,
+    payload: EmailCheckRequest,
+    db: AsyncSession = Depends(get_db),
+    redis_client: redis.Redis = Depends(get_redis),
+):
+    await rate_limit_registration_resend(request, payload.email, redis_client)
+
     await service.resend_registration_otp(db, payload.email)
     return EmailCheckResponse(
         message="If a verification is pending, a new OTP has been sent."

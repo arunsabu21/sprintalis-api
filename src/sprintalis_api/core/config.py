@@ -24,5 +24,7 @@ class Settings(BaseSettings):
     password_reset_expire_minutes: int = 15
     frontend_url: str
 
+    redis_url: str = "redis://localhost:6379/0"
+
 
 settings = Settings()
