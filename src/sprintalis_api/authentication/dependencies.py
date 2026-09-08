@@ -106,3 +106,96 @@ async def rate_limit_registration_resend(
         limit=3,
         window_seconds=3,
     )
+
+
+async def rate_limit_verify_otp(request: Request, redis_client: redis.Redis) -> None:
+    ip = request.client.host if request.client else "unknown"
+
+    await check_rate_limit(
+        redis_client,
+        key=f"rate_limit:verify_otp:ip:{hash_identifier(ip)}",
+        limit=20,
+        window_seconds=900,
+    )
+
+
+async def rate_limit_register(
+    request: Request,
+    redis_client: redis.Redis,
+) -> None:
+    ip = request.client.host if request.client else "unknown"
+
+    await check_rate_limit(
+        redis_client,
+        key=f"rate_limit:register:ip:{hash_identifier(ip)}",
+        limit=10,
+        window_seconds=900,
+    )
+
+
+async def rate_limit_login(request: Request, redis_client: redis.Redis) -> None:
+    ip = request.client.host if request.client else "unknown"
+
+    await check_rate_limit(
+        redis_client,
+        key=f"rate_limit:login:ip:{hash_identifier(ip)}",
+        limit=20,
+        window_seconds=900,
+    )
+
+
+async def rate_limit_password_reset_request(
+    request: Request, payload_email: str, redis_client: redis.Redis
+) -> None:
+    ip = request.client.host if request.client else "unknown"
+
+    await check_rate_limit(
+        redis_client,
+        key=f"rate_limit:password_reset_request:ip:{hash_identifier(ip)}",
+        limit=10,
+        window_seconds=900,
+    )
+
+    email_hash = hash_identifier(normalize_email(payload_email))
+    await check_rate_limit(
+        redis_client,
+        key=f"rate_limit:password_reset_request:email:{email_hash}",
+        limit=3,
+        window_seconds=900,
+    )
+
+
+async def rate_limit_password_reset_confirm(
+    request: Request,
+    redis_client: redis.Redis,
+) -> None:
+    ip = request.client.host if request.client else "unknown"
+
+    await check_rate_limit(
+        redis_client,
+        key=f"rate_limit:password_reset_confirm:{hash_identifier(ip)}",
+        limit=10,
+        window_seconds=900,
+    )
+
+
+async def rate_limit_refresh(request: Request, redis_client: redis.Redis) -> None:
+    ip = request.client.host if request.client else "unknown"
+
+    await check_rate_limit(
+        redis_client,
+        key=f"rate_limit:refresh:ip:{hash_identifier(ip)}",
+        limit=20,
+        window_seconds=900,
+    )
+
+
+async def rate_limit_google_login(request: Request, redis_client: redis.Redis) -> None:
+    ip = request.client.host if request.client else "unknown"
+
+    await check_rate_limit(
+        redis_client,
+        key=f"rate_limit:google_login:ip:{hash_identifier(ip)}",
+        limit=20,
+        window_seconds=900,
+    )

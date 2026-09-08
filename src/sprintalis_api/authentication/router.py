@@ -27,6 +27,13 @@ from sprintalis_api.authentication.dependencies import (
     get_client_metadata,
     rate_limit_registration_request,
     rate_limit_registration_resend,
+    rate_limit_verify_otp,
+    rate_limit_register,
+    rate_limit_login,
+    rate_limit_password_reset_request,
+    rate_limit_password_reset_confirm,
+    rate_limit_refresh,
+    rate_limit_google_login,
 )
 from sprintalis_api.authentication.models import User
 from sprintalis_api.authentication.schemas import (
@@ -82,7 +89,14 @@ async def resend_otp(
 
 
 @router.post("/register/verify-otp", response_model=OTPVerifyResponse)
-async def verify_otp(payload: OTPVerifyRequest, db: AsyncSession = Depends(get_db)):
+async def verify_otp(
+    request: Request,
+    payload: OTPVerifyRequest,
+    db: AsyncSession = Depends(get_db),
+    redis_client: redis.Redis = Depends(get_redis),
+):
+    await rate_limit_verify_otp(request, redis_client)
+
     try:
         ticket = await service.verify_registration_otp(db, payload.email, payload.otp)
     except (InvalidOtpError, OTPExpiredError, OTPMaxAttemptsExceededError) as exc:
@@ -98,7 +112,10 @@ async def register(
     request: Request,
     payload: RegisterRequest,
     db: AsyncSession = Depends(get_db),
+    redis_client: redis.Redis = Depends(get_redis),
 ):
+    await rate_limit_register(request, redis_client)
+
     user_agent, ip_address = get_client_metadata(request)
     try:
         user, tokens = await service.register_user(
@@ -120,8 +137,13 @@ async def register(
 
 @router.post("/login", response_model=LoginResponse)
 async def login(
-    request: Request, payload: LoginRequest, db: AsyncSession = Depends(get_db)
+    request: Request,
+    payload: LoginRequest,
+    db: AsyncSession = Depends(get_db),
+    redis_client: redis.Redis = Depends(get_redis),
 ):
+    await rate_limit_login(request, redis_client)
+
     user_agent, ip_address = get_client_metadata(request)
     try:
         user, tokens = await service.login_with_password(
@@ -143,8 +165,13 @@ async def login(
 
 @router.post("/google", response_model=LoginResponse)
 async def google_login(
-    request: Request, payload: GoogleLoginRequest, db: AsyncSession = Depends(get_db)
+    request: Request,
+    payload: GoogleLoginRequest,
+    db: AsyncSession = Depends(get_db),
+    redis_client: redis.Redis = Depends(get_redis),
 ):
+    await rate_limit_google_login(request, redis_client)
+
     user_agent, ip_address = get_client_metadata(request)
     try:
         user, tokens = await service.login_with_google(
@@ -164,8 +191,13 @@ async def google_login(
 
 @router.post("/refresh", response_model=TokenPair)
 async def refresh(
-    request: Request, payload: RefreshRequest, db: AsyncSession = Depends(get_db)
+    request: Request,
+    payload: RefreshRequest,
+    db: AsyncSession = Depends(get_db),
+    redis_client: redis.Redis = Depends(get_redis),
 ):
+    await rate_limit_refresh(request, redis_client)
+
     user_agent, ip_address = get_client_metadata(request)
     try:
         tokens = await service.refresh_access_token(
@@ -193,16 +225,26 @@ async def logout_all(
 
 @router.post("/password-reset/request", response_model=PasswordResetRequestResponse)
 async def request_password_reset(
-    payload: PasswordResetRequest, db: AsyncSession = Depends(get_db)
+    request: Request,
+    payload: PasswordResetRequest,
+    db: AsyncSession = Depends(get_db),
+    redis_client: redis.Redis = Depends(get_redis),
 ):
+    await rate_limit_password_reset_request(request, payload.email, redis_client)
+
     await service.request_password_reset(db, payload.email)
     return PasswordResetRequestResponse()
 
 
 @router.post("/password-reset/confirm", response_model=PasswordResetConfirmResponse)
 async def confirm_password_reset(
-    payload: PasswordResetConfirmRequest, db: AsyncSession = Depends(get_db)
+    request: Request,
+    payload: PasswordResetConfirmRequest,
+    db: AsyncSession = Depends(get_db),
+    redis_client: redis.Redis = Depends(get_redis),
 ):
+    await rate_limit_password_reset_confirm(request, redis_client)
+    
     try:
         await service.reset_password(db, payload.token, payload.new_password)
     except InvalidResetTokenError as exc:
