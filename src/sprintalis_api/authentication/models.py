@@ -81,6 +81,11 @@ class User(Base):
         nullable=False,
     )
 
+    password_changed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
     auth_identities: Mapped[list["AuthIdentity"]] = relationship(
         back_populates="user",
         cascade="all, delete-orphan",

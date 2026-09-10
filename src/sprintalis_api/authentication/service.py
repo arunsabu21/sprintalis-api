@@ -449,6 +449,7 @@ async def reset_password(db: AsyncSession, raw_token: str, new_password: str) ->
         )
 
     identity.password_hash = security.hash_password(new_password)
+    user.password_changed_at = datetime.now(timezone.utc)
 
     active_tokens = await db.scalars(
         select(RefreshToken).where(

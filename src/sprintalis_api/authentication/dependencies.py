@@ -5,10 +5,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import redis.asyncio as redis
 
 from sprintalis_api.core.database import get_db
-from sprintalis_api.core.redis_client import get_redis
 from sprintalis_api.core.rate_limiter import check_rate_limit, hash_identifier
 from sprintalis_api.authentication.schemas import normalize_email
-from sprintalis_api.core.security import decode_access_token
+from sprintalis_api.core.security import decode_access_token, is_token_issued_before
 from sprintalis_api.authentication.models import User
 
 bearer_scheme = HTTPBearer(auto_error=True)
@@ -24,16 +23,17 @@ async def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired access token.",
-            headers={"WWW.Authenticate": "Bearer"},
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
     user_id = payload.get("sub")
+    token_iat = payload.get("iat")
 
-    if user_id is None:
+    if user_id is None or token_iat is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token payload.",
-            headers={"WWW.Authenticate": "Bearer"},
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
     user = await db.get(User, user_id)
@@ -42,7 +42,14 @@ async def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User no longer exist.",
-            headers={"WWW.Authenticate": "Bearer"},
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    if is_token_issued_before(token_iat, user.password_changed_at):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session has expired due to a password change. Please login again.",
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
     if not user.is_active:

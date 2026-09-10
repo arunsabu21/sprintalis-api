@@ -41,6 +41,14 @@ def create_access_token(
     )
 
 
+def is_token_issued_before(token_iat: int, cutoff: datetime | None) -> bool:
+    if cutoff is None:
+        return False
+
+    token_issued_at = datetime.fromtimestamp(token_iat, tz=timezone.utc)
+    return token_issued_at < cutoff
+
+
 def decode_access_token(token: str) -> dict[str, Any] | None:
     try:
         payload = jwt.decode(
