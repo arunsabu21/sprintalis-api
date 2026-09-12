@@ -77,8 +77,18 @@ def get_refresh_token_expiry() -> datetime:
     )
 
 
+_test_otp_override: str | None = None
+
+
 def generate_otp(length: int = 6) -> str:
+    if _test_otp_override is not None:
+        return _test_otp_override
     return "".join(secrets.choice("0123456789") for _ in range(length))
+
+
+def set_test_otp_override(value: str | None):
+    global _test_otp_override
+    _test_otp_override = value
 
 
 def hash_otp(raw_otp: str) -> str:

@@ -29,3 +29,16 @@ sprintalis-api = "sprintalis_api:main"
 [build-system]
 requires = ["uv_build>=0.12.7,<0.13.0"]
 build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "fakeredis>=2.38.0",
+    "httpx>=0.28.1",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "pytest-dotenv>=0.5.2",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+env_files = [".env.test"]
