@@ -146,8 +146,19 @@ def decode_registration_ticket(ticket: str) -> str | None:
     return email
 
 
+_test_reset_token_override: str | None = None
+
+
 def generate_password_reset_token() -> str:
+    if _test_reset_token_override is not None:
+        return _test_reset_token_override
     return secrets.token_urlsafe(32)
+
+
+def set_test_reset_token_override(value: str | None) -> None:
+    """Test-only hook: forces generate_password_reset_token() to return a fixed value."""
+    global _test_reset_token_override
+    _test_reset_token_override = value
 
 
 def hash_password_reset_token(raw_token: str) -> str:
