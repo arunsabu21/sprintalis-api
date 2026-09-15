@@ -11,6 +11,7 @@ from sprintalis_api.core.config import settings
 from sprintalis_api.core.database import Base
 
 from sprintalis_api.authentication import models
+from sprintalis_api.workspaces import models
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

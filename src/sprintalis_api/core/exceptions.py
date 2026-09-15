@@ -63,3 +63,12 @@ class InvalidResetTokenError(AppError):
 
 class SamePasswordError(AppError):
     pass
+
+
+# Workspaces
+class SlugConflictError(AppError):
+    pass
+
+
+class WorkspaceNotFoundError(AppError):
+    pass

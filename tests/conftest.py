@@ -12,13 +12,17 @@ from sprintalis_api.main import app
 from sprintalis_api.core.database import Base, get_db
 from sprintalis_api.core.redis_client import get_redis
 from sprintalis_api.core.config import settings
+from sprintalis_api.core.security import set_test_otp_override
 
+SHARED_TEST_OTP = "123456"
 
 
 @pytest_asyncio.fixture(scope="function")
 async def db_session():
     engine = create_async_engine(settings.database_url, echo=False)
-    session_local = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
+    session_local = async_sessionmaker(
+        bind=engine, class_=AsyncSession, expire_on_commit=False
+    )
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -55,3 +59,41 @@ async def client(db_session, fake_redis):
         yield ac
 
     app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture
+async def registered_user(client):
+    set_test_otp_override(SHARED_TEST_OTP)
+
+    email = "testuser@example.com"
+    password = "TestPass123"
+    full_name = "Test User"
+
+    await client.post("/api/v1/auth/register/request-otp", json={"email": email})
+
+    verify_resp = await client.post(
+        "/api/v1/auth/register/verify-otp",
+        json={"email": email, "otp": SHARED_TEST_OTP},
+    )
+    ticket = verify_resp.json()["registration_ticket"]
+
+    register_resp = await client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": email,
+            "full_name": full_name,
+            "password": password,
+            "registration_ticket": ticket,
+        },
+    )
+    data = register_resp.json()
+
+    set_test_otp_override(None)
+
+    return {
+        "access_token": data["tokens"]["access_token"],
+        "refresh_token": data["tokens"]["refresh_token"],
+        "user": data["user"],
+        "email": email,
+        "password": password,
+    }
