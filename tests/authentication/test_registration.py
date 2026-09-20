@@ -114,7 +114,7 @@ async def test_verify_otp_expired(client, db_session):
         json={"email": email, "otp": TEST_OTP},
     )
     assert resp.status_code == 400
-    assert "expired" in resp.json()["detail"].lower()
+    assert resp.json()["detail"]["code"] == "OTP_EXPIRED"
 
 
 async def test_register_with_stale_ticket_after_already_registered(

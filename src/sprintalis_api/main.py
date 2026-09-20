@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 import redis.asyncio as redis
+from fastapi.middleware.cors import CORSMiddleware
 
 from sprintalis_api.api.v1.router import api_router
 from sprintalis_api.core.database import get_db
@@ -34,3 +35,12 @@ async def health_check(
         status_report["status"] = "degraded"
 
     return status_report
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)

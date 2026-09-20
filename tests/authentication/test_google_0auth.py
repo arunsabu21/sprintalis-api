@@ -75,10 +75,7 @@ async def test_google_login_with_existing_password_account_fails(
 
     resp = await client.post("/api/v1/auth/google", json={"id_token": "fake_token"})
     assert resp.status_code == 400
-    assert (
-        "password" in resp.json()["detail"].lower()
-        or "exists" in resp.json()["detail"].lower()
-    )
+    assert resp.json()["detail"]["code"] == "ACCOUNT_USES_PASSWORD"
 
 
 async def test_google_login_invalid_token_returns_401(client, monkeypatch):

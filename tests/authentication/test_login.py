@@ -118,7 +118,7 @@ async def test_login_with_google_only_account_fails(client, db_session):
         json={"email": "googleonly@example.com", "password": "AnyPassword123"},
     )
     assert resp.status_code == 400
-    assert "google" in resp.json()["detail"].lower()
+    assert resp.json()["detail"]["code"] == "ACCOUNT_USES_GOOGLE"
 
 
 async def test_login_nonexistent_user_returns_generic_error(client):
@@ -127,7 +127,7 @@ async def test_login_nonexistent_user_returns_generic_error(client):
         json={"email": "doesnotexist@example.com", "password": "SomePassword123"},
     )
     assert resp.status_code == 401
-    assert resp.json()["detail"] == "Incorrect email or password."
+    assert resp.json()["detail"]["code"] == "INVALID_CREDENTIALS"
 
 
 async def test_login_disabled_account(client, registered_user, db_session):

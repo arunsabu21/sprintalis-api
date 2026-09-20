@@ -2,67 +2,71 @@ from datetime import datetime
 
 
 class AppError(Exception):
+    code: str = "UNKNOWN_ERROR"
+
     def __init__(self, message: str):
         self.message = message
         super().__init__(message)
 
 
 class EmailAlreadyRegisteredError(AppError):
-    pass
+    code = "EMAIL_ALREADY_REGISTERED"
 
 
 class InvalidOtpError(AppError):
-    pass
+    code = "INVALID_OTP"
 
 
 class OTPExpiredError(AppError):
-    pass
+    code = "OTP_EXPIRED"
 
 
 class OTPMaxAttemptsExceededError(AppError):
-    pass
+    code = "OTP_MAX_ATTEMPTS_EXCEEDED"
 
 
 class InvalidRegistrationTicketError(AppError):
-    pass
+    code = "INVALID_REGISTRATION_TICKET"
 
 
 class InvalidCredentialsError(AppError):
-    pass
+    code = "INVALID_CREDENTIALS"
 
 
 class AccountLockedError(AppError):
+    code = "ACCOUNT_LOCKED"
+    
     def __init__(self, message: str, locked_until: datetime):
         self.locked_until = locked_until
         super().__init__(message)
 
 
 class AccountDisabledError(AppError):
-    pass
+    code = "ACCOUNT_DISABLED"
 
 
 class AccountUsesGoogleError(AppError):
-    pass
+    code = "ACCOUNT_USES_GOOGLE"
 
 
 class AccountUsesPasswordError(AppError):
-    pass
+    code = "ACCOUNT_USES_PASSWORD"
 
 
 class InvalidGoogleTokenError(AppError):
-    pass
+    code = "INVALID_GOOGLE_TOKEN"
 
 
 class InvalidRefreshTokenError(AppError):
-    pass
+    code = "INVALID_REFRESH_TOKEN"
 
 
 class InvalidResetTokenError(AppError):
-    pass
+    code = "INVALID_RESET_TOKEN"
 
 
 class SamePasswordError(AppError):
-    pass
+    code = "SAME_PASSWORD"
 
 
 # Workspaces

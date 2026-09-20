@@ -22,7 +22,7 @@ async def get_current_user(
     if payload is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired access token.",
+            detail={"code": "INVALID_ACCESS_TOKEN", "message": "Invalid or expired access token."},
             headers={"WWW-Authenticate": "Bearer"},
         )
 
@@ -32,7 +32,7 @@ async def get_current_user(
     if user_id is None or token_iat is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token payload.",
+            detail={"code": "INVALID_TOKEN_PAYLOAD", "message": "Invalid token payload."},
             headers={"WWW-Authenticate": "Bearer"},
         )
 
@@ -41,21 +41,24 @@ async def get_current_user(
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User no longer exist.",
+            detail={"code": "USER_NOT_FOUND", "message": "User no longer exists."},
             headers={"WWW-Authenticate": "Bearer"},
         )
 
     if is_token_issued_before(token_iat, user.password_changed_at):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Session has expired due to a password change. Please login again.",
+            detail={
+                "code": "SESSION_EXPIRED_PASSWORD_CHANGED",
+                "message": "Session has expired due to a password change. Please login again.",
+            },
             headers={"WWW-Authenticate": "Bearer"},
         )
 
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Account has been disabled",
+            detail={"code": "ACCOUNT_DISABLED", "message": "Account has been disabled."},
         )
 
     return user

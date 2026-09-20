@@ -100,7 +100,10 @@ async def verify_otp(
     try:
         ticket = await service.verify_registration_otp(db, payload.email, payload.otp)
     except (InvalidOtpError, OTPExpiredError, OTPMaxAttemptsExceededError) as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": exc.code, "message": exc.message},
+        )
 
     return OTPVerifyResponse(verified=True, registration_ticket=ticket)
 
@@ -128,9 +131,15 @@ async def register(
             ip_address=ip_address,
         )
     except InvalidRegistrationTicketError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": exc.code, "message": exc.message},
+        )
     except EmailAlreadyRegisteredError as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=exc.message)
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": exc.code, "message": exc.message},
+        )
 
     return LoginResponse(user=UserPublic.model_validate(user), tokens=tokens)
 
@@ -151,14 +160,24 @@ async def login(
         )
     except InvalidCredentialsError as exc:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail=exc.message
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={"code": exc.code, "message": exc.message},
         )
     except AccountLockedError as exc:
-        raise HTTPException(status_code=status.HTTP_423_LOCKED, detail=exc.message)
+        raise HTTPException(
+            status_code=status.HTTP_423_LOCKED,
+            detail={"code": exc.code, "message": exc.message},
+        )
     except AccountDisabledError as exc:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=exc.message)
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"code": exc.code, "message": exc.message},
+        )
     except AccountUsesGoogleError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": exc.code, "message": exc.message},
+        )
 
     return LoginResponse(user=UserPublic.model_validate(user), tokens=tokens)
 
@@ -179,12 +198,19 @@ async def google_login(
         )
     except InvalidGoogleTokenError as exc:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail=exc.message
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={"code": exc.code, "message": exc.message},
         )
     except AccountUsesPasswordError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": exc.code, "message": exc.message},
+        )
     except AccountDisabledError as exc:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=exc.message)
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"code": exc.code, "message": exc.message},
+        )
 
     return LoginResponse(user=UserPublic.model_validate(user), tokens=tokens)
 
@@ -205,7 +231,8 @@ async def refresh(
         )
     except InvalidRefreshTokenError as exc:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail=exc.message
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={"code": exc.code, "message": exc.message},
         )
 
     return tokens
@@ -244,13 +271,19 @@ async def confirm_password_reset(
     redis_client: redis.Redis = Depends(get_redis),
 ):
     await rate_limit_password_reset_confirm(request, redis_client)
-    
+
     try:
         await service.reset_password(db, payload.token, payload.new_password)
     except InvalidResetTokenError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": exc.code, "message": exc.message},
+        )
     except SamePasswordError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": exc.code, "message": exc.message},
+        )
     return PasswordResetConfirmResponse()
 
 
