@@ -395,7 +395,7 @@ async def request_password_reset(db: AsyncSession, email: str) -> None:
     await db.commit()
 
     # TODO: real email provider. Dev-only logging
-    reset_link = f"{settings.frontend_url}/reset-password?token={raw_token}"
+    reset_link = f"{settings.frontend_url}reset-password?token={raw_token}"
     print(f"[DEV] Password reset link for {email}: {reset_link}")
 
 
