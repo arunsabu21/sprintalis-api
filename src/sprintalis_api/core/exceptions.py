@@ -71,8 +71,8 @@ class SamePasswordError(AppError):
 
 # Workspaces
 class SlugConflictError(AppError):
-    pass
+    code = "SLUG_CONFLICT"
 
 
 class WorkspaceNotFoundError(AppError):
-    pass
+    code = "WORKSPACE_NOT_FOUND"

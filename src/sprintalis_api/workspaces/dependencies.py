@@ -20,7 +20,8 @@ async def get_workspace_or_404(
 
     if workspace is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "WORKSPACE_NOT_FOUND", "message": "Workspace not found."},
         )
 
     return workspace
@@ -37,7 +38,8 @@ async def require_membership(
 
     if membership is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "SLUG_CONFLICT", "message": "Workspace not found."}
         )
 
     return membership
