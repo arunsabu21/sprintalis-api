@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sprintalis_api.core.database import get_db
 from sprintalis_api.authentication.dependencies import get_current_user
 from sprintalis_api.authentication.models import User
-from sprintalis_api.workspaces.models import Workspace, WorkspaceMember
+from sprintalis_api.workspaces.models import Workspace, WorkspaceMember, WorkspaceRole
 from sprintalis_api.workspaces.repository import (
     WorkspaceRepository,
     WorkspaceMemberRepository,
@@ -39,7 +39,21 @@ async def require_membership(
     if membership is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail={"code": "SLUG_CONFLICT", "message": "Workspace not found."}
+            detail={"code": "SLUG_CONFLICT", "message": "Workspace not found."},
         )
 
+    return membership
+
+
+async def require_owner(
+    membership: WorkspaceMember = Depends(require_membership),
+) -> WorkspaceMember:
+    if membership.role != WorkspaceRole.OWNER:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "code": "WORKSPACE_OWNER_REQUIRED",
+                "message": "Only the workspace owner can delete the workspace.",
+            },
+        )
     return membership

@@ -36,6 +36,12 @@ class Workspace(Base):
     members: Mapped[list["WorkspaceMember"]] = relationship(
         back_populates="workspace", cascade="all, delete-orphan"
     )
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    deleted_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
 
     def __repr__(self) -> str:
         return f"<Workspace id={self.id} slug={self.slug}>"

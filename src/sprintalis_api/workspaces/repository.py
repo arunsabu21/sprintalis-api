@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import select
+from sqlalchemy import select, update, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sprintalis_api.workspaces.models import Workspace, WorkspaceMember, WorkspaceRole
 
@@ -9,7 +9,11 @@ class WorkspaceRepository:
         self.db = db
 
     async def get_by_id(self, workspace_id: uuid.UUID) -> Workspace | None:
-        return await self.db.get(Workspace, workspace_id)
+        return await self.db.scalar(
+            select(Workspace).where(
+                Workspace.id == workspace_id, Workspace.deleted_at.is_(None)
+            )
+        )
 
     async def get_by_slug(self, slug: str) -> Workspace | None:
         return await self.db.scalar(select(Workspace).where(Workspace.slug == slug))
@@ -24,10 +28,19 @@ class WorkspaceRepository:
         result = await self.db.scalars(
             select(Workspace)
             .join(WorkspaceMember, WorkspaceMember.workspace_id == Workspace.id)
-            .where(WorkspaceMember.user_id == user_id)
+            .where(WorkspaceMember.user_id == user_id, Workspace.deleted_at.is_(None))
             .order_by(Workspace.created_at.desc())
         )
         return list(result.all())
+
+    async def soft_delete(self, workspace_id: uuid.UUID, deleted_by: uuid.UUID) -> bool:
+        deleted_id = await self.db.scalar(
+            update(Workspace)
+            .where(Workspace.id == workspace_id, Workspace.deleted_at.is_(None))
+            .values(deleted_at=func.now(), deleted_by=deleted_by)
+            .returning(Workspace.id)
+        )
+        return deleted_id
 
 
 class WorkspaceMemberRepository:

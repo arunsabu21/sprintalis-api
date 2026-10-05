@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from sprintalis_api.core.database import get_db
@@ -8,6 +8,7 @@ from sprintalis_api.workspaces import service
 from sprintalis_api.workspaces.dependencies import (
     get_workspace_or_404,
     require_membership,
+    require_owner,
 )
 from sprintalis_api.workspaces.models import Workspace, WorkspaceMember
 from sprintalis_api.workspaces.schemas import (
@@ -50,3 +51,18 @@ async def get_workspace(
     membership: WorkspaceMember = Depends(require_membership),
 ):
     return WorkspaceResponse.model_validate(workspace)
+
+
+@router.delete("/{workspace_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_workspace(
+    workspace: Workspace = Depends(get_workspace_or_404),
+    membership: WorkspaceMember = Depends(require_owner),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    deleted = await service.delete_workspace(
+        db, workspace.id, deleted_by=membership.user_id
+    )
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found"
+        )

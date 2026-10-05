@@ -293,21 +293,6 @@ async def test_patch_workspace_not_allowed(client, registered_user):
     assert resp.status_code == 405
 
 
-async def test_delete_workspace_not_allowed(client, registered_user):
-    create_resp = await client.post(
-        "/api/v1/workspaces",
-        json={"name": "Delete Method Test"},
-        headers=auth_header(registered_user["access_token"]),
-    )
-    workspace_id = create_resp.json()["id"]
-
-    resp = await client.delete(
-        f"/api/v1/workspaces/{workspace_id}",
-        headers=auth_header(registered_user["access_token"]),
-    )
-    assert resp.status_code == 405
-
-
 async def test_members_endpoint_not_found(client, registered_user):
     create_resp = await client.post(
         "/api/v1/workspaces",
