@@ -53,7 +53,7 @@ async def require_owner(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={
                 "code": "WORKSPACE_OWNER_REQUIRED",
-                "message": "Only the workspace owner can delete the workspace.",
+                "message": "Only the workspace owner can perform this action.",
             },
         )
     return membership

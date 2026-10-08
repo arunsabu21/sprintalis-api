@@ -15,7 +15,10 @@ from sprintalis_api.workspaces.schemas import (
     WorkspaceCreateRequest,
     WorkspaceResponse,
     WorkspaceListResponse,
+    WorkspaceUpdateRequest,
 )
+
+from sprintalis_api.core.exceptions import WorkspaceLimitReachedError
 
 router = APIRouter(prefix="/workspaces", tags=["workspaces"])
 
@@ -26,9 +29,18 @@ async def create_workspace(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    workspace = await service.create_workspace(
-        db, name=payload.name, created_by=current_user.id
-    )
+    try:
+        workspace = await service.create_workspace(
+            db, name=payload.name, created_by=current_user.id
+        )
+    except WorkspaceLimitReachedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "code": "WORKSPACE_LIMIT_REACHED",
+                "message": "Workspace limit reached.",
+            },
+        )
 
     return WorkspaceResponse.model_validate(workspace)
 
@@ -64,5 +76,28 @@ async def delete_workspace(
     )
     if not deleted:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "WORKSPACE_NOT_FOUND", "message": "Workspace not found."},
         )
+
+
+@router.patch("/{workspace_id}", response_model=WorkspaceResponse)
+async def rename_workspace(
+    payload: WorkspaceUpdateRequest,
+    workspace: Workspace = Depends(get_workspace_or_404),
+    membership: WorkspaceMember = Depends(require_owner),
+    db: AsyncSession = Depends(get_db),
+):
+    workspace = await service.rename_workspace(
+        db,
+        workspace_id=workspace.id,
+        name=payload.name,
+    )
+
+    if workspace is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "WORKSPACE_NOT_FOUND", "message": "Workspace not found."},
+        )
+
+    return WorkspaceResponse.model_validate(workspace)

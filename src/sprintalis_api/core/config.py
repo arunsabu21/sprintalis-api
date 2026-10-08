@@ -26,5 +26,7 @@ class Settings(BaseSettings):
 
     redis_url: str = "redis://localhost:6379/0"
 
+    max_owned_workspaces: int = 10
+
 
 settings = Settings()

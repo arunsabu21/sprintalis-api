@@ -42,6 +42,28 @@ class WorkspaceRepository:
         )
         return deleted_id
 
+    async def update_name(self, workspace_id: uuid.UUID, name: str) -> Workspace | None:
+        workspace = await self.db.scalar(
+            update(Workspace)
+            .where(Workspace.id == workspace_id, Workspace.deleted_at.is_(None))
+            .values(name=name)
+            .returning(Workspace)
+        )
+        return workspace
+
+    async def count_owned_by_user(self, user_id: uuid.UUID) -> int:
+        count = await self.db.scalar(
+            select(func.count())
+            .select_from(WorkspaceMember)
+            .join(Workspace, Workspace.id == WorkspaceMember.workspace_id)
+            .where(
+                WorkspaceMember.user_id == user_id,
+                WorkspaceMember.role == WorkspaceRole.OWNER,
+                Workspace.deleted_at.is_(None),
+            )
+        )
+        return count or 0
+
 
 class WorkspaceMemberRepository:
     def __init__(self, db: AsyncSession):

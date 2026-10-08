@@ -76,3 +76,7 @@ class SlugConflictError(AppError):
 
 class WorkspaceNotFoundError(AppError):
     code = "WORKSPACE_NOT_FOUND"
+
+
+class WorkspaceLimitReachedError(AppError):
+    code = "WORKSPACE_LIMIT_REACHED"

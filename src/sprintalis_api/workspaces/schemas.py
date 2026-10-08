@@ -10,23 +10,25 @@ def slugify(name: str) -> str:
     return slug.strip("-")
 
 
+def validate_workspace_name(value: str) -> str:
+    value = value.strip()
+
+    if not value:
+        raise ValueError("Workspace name cannot be empty.")
+
+    if not slugify(value):
+        raise ValueError("Workspace name must contain at least one letter or number.")
+
+    return value
+
+
 class WorkspaceCreateRequest(BaseModel):
     name: str = Field(min_length=1, max_length=255)
 
     @field_validator("name")
     @classmethod
     def validate_name(cls, value: str) -> str:
-        value = value.strip()
-
-        if not value:
-            raise ValueError("Workspace name cannot be empty.")
-
-        if not slugify(value):
-            raise ValueError(
-                "Workspace name must contain at least one letter or number"
-            )
-
-        return value
+        return validate_workspace_name(value)
 
 
 class WorkspaceResponse(BaseModel):
@@ -41,3 +43,12 @@ class WorkspaceResponse(BaseModel):
 
 class WorkspaceListResponse(BaseModel):
     workspaces: list[WorkspaceResponse]
+
+
+class WorkspaceUpdateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=255)
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value: str) -> str:
+        return validate_workspace_name(value)

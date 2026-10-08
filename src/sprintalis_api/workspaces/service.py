@@ -1,8 +1,11 @@
 import uuid
 import logging
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from sprintalis_api.core.exceptions import SlugConflictError
+from sprintalis_api.core.config import settings
+from sprintalis_api.core.exceptions import SlugConflictError, WorkspaceLimitReachedError
+from sprintalis_api.authentication.models import User
 from sprintalis_api.workspaces.models import Workspace, WorkspaceRole
 from sprintalis_api.workspaces.repository import (
     WorkspaceRepository,
@@ -26,6 +29,13 @@ async def create_workspace(
 
     slug = base_slug
     suffix = 1
+
+    await db.execute(select(User.id).where(User.id == created_by).with_for_update())
+    owned_count = await workspace_repo.count_owned_by_user(created_by)
+
+    if owned_count >= settings.max_owned_workspaces:
+        await db.rollback()
+        raise WorkspaceLimitReachedError(settings.max_owned_workspaces)
 
     while await workspace_repo.get_by_slug(slug) is not None:
         slug = f"{base_slug}-{suffix}"
@@ -68,3 +78,28 @@ async def delete_workspace(
         extra={"workspace_id": str(workspace_id), "deleted_by": str(deleted_by)},
     )
     return True
+
+
+async def rename_workspace(
+    db: AsyncSession, workspace_id: uuid.UUID, name: str
+) -> Workspace | None:
+    workspace_repo = WorkspaceRepository(db)
+
+    workspace = await workspace_repo.update_name(
+        workspace_id=workspace_id,
+        name=name,
+    )
+
+    if workspace is None:
+        await db.rollback()
+        return None
+
+    await db.commit()
+    await db.refresh(workspace)
+
+    logger.info(
+        "workspace_renamed",
+        extra={"workspace_id": str(workspace_id)},
+    )
+
+    return workspace
