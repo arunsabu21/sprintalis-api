@@ -8,7 +8,6 @@ from sprintalis_api.workspaces import service
 from sprintalis_api.workspaces.dependencies import (
     get_workspace_or_404,
     require_membership,
-    require_owner,
 )
 from sprintalis_api.workspaces.models import Workspace, WorkspaceMember
 from sprintalis_api.workspaces.schemas import (
@@ -17,6 +16,7 @@ from sprintalis_api.workspaces.schemas import (
     WorkspaceListResponse,
     WorkspaceUpdateRequest,
 )
+from sprintalis_api.workspaces.permissions import Permission, require_permission
 
 from sprintalis_api.core.exceptions import WorkspaceLimitReachedError
 
@@ -68,7 +68,9 @@ async def get_workspace(
 @router.delete("/{workspace_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_workspace(
     workspace: Workspace = Depends(get_workspace_or_404),
-    membership: WorkspaceMember = Depends(require_owner),
+    membership: WorkspaceMember = Depends(
+        require_permission(Permission.WORKSPACE_DELETE)
+    ),
     db: AsyncSession = Depends(get_db),
 ) -> None:
     deleted = await service.delete_workspace(
@@ -81,11 +83,14 @@ async def delete_workspace(
         )
 
 
-@router.patch("/{workspace_id}", response_model=WorkspaceResponse)
+@router.patch(
+    "/{workspace_id}",
+    response_model=WorkspaceResponse,
+    dependencies=[Depends(require_permission(Permission.WORKSPACE_RENAME))],
+)
 async def rename_workspace(
     payload: WorkspaceUpdateRequest,
     workspace: Workspace = Depends(get_workspace_or_404),
-    membership: WorkspaceMember = Depends(require_owner),
     db: AsyncSession = Depends(get_db),
 ):
     workspace = await service.rename_workspace(
